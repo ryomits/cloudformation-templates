@@ -249,3 +249,109 @@ Resources:
     Properties:
       SubnetId: !Ref DatastoreSubnet2
       RouteTableId: !Ref PrivateRouteTable
+  VPCDefaultSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Allow all communications in VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: !FindInMap
+            - StackConfig
+            - VPC
+            - CIDR
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: !FindInMap
+            - StackConfig
+            - VPC
+            - CIDR
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !FindInMap
+            - StackConfig
+            - VPC
+            - CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}VPCDefaultSecurityGroup
+  SSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Enable SSH access via port 22
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHFrom
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}SSHSecurityGroup
+  BastionWaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  BastionWaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: BastionInstance
+    Properties:
+      Handle: !Ref BastionWaitHandle
+      Timeout: 900
+  BastionInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !FindInMap
+        - StackConfig
+        - BastionServer
+        - InstanceType
+      KeyName: !Ref KeyName
+      SubnetId: !Ref FrontendSubnet1
+      ImageId: !FindInMap
+        - AWSAmazonLinuxAMI
+        - !Ref AWS::Region
+        - 201803
+      SecurityGroupIds:
+        - !Ref SSHSecurityGroup
+        - !Ref VPCDefaultSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}Bastion
+      UserData: !Base64
+        Fn::Join:
+          - ''
+          - - "#! /bin/bash -v\n"
+            - "yum update -y\n"
+            - "# Helper function\n"
+            - "function error_exit\n"
+            - "{\n"
+            - '  /opt/aws/bin/cfn-signal -e 1 -r "$1" '''
+            - !Ref 'BastionWaitHandle'
+            - "'\n"
+            - "  exit 1\n"
+            - "}\n"
+            - "# Install packages\n"
+            - '/opt/aws/bin/cfn-init -s '
+            - !Ref 'AWS::StackId'
+            - ' -r BastionInstance '
+            - '    --region '
+            - !Ref 'AWS::Region'
+            - " || error_exit 'Failed to run cfn-init'\n"
+            - "# All is well so signal success\n"
+            - /opt/aws/bin/cfn-signal -e $? -r "BastionInstance setup complete" '
+            - !Ref 'BastionWaitHandle'
+            - "'\n"
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              mysql55: []
+  BastionInstanceEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref BastionInstance
