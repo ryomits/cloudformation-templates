@@ -169,7 +169,7 @@ Resources:
         - ApplicationSubnet2
         - CIDR
       AvailabilityZone: !Select
-        - '1'
+        - 1
         - !GetAZs
           Ref: AWS::Region
       Tags:
