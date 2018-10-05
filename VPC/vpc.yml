@@ -1,0 +1,236 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: VPC sample
+Parameters: {}
+Conditions: {}
+Mappings:
+  StackConfig:
+    VPC:
+      CIDR: 10.16.0.0/16
+    FrontendSubnet1:
+      CIDR: 10.16.0.0/24
+    FrontendSubnet2:
+      CIDR: 10.16.1.0/24
+    ApplicationSubnet1:
+      CIDR: 10.16.100.0/24
+    ApplicationSubnet2:
+      CIDR: 10.16.101.0/24
+    DatastoreSubnet1:
+      CIDR: 10.16.200.0/24
+    DatastoreSubnet2:
+      CIDR: 10.16.201.0/24
+    BastionServer:
+      InstanceType: t2.micro
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !FindInMap
+        - StackConfig
+        - VPC
+        - CIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackId
+        - Key: Network
+          Value: Public
+        - Key: Name
+          Value: !Ref AWS::StackName
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackId
+        - Key: Network
+          Value: Public
+        - Key: Name
+          Value: !Ref AWS::StackName
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackId
+        - Key: Network
+          Value: Public
+        - Key: Name
+          Value: !Sub ${AWS::StackName}PublicRouteTable
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackId
+        - Key: Network
+          Value: Private
+        - Key: Name
+          Value: !Sub ${AWS::StackName}PrivateRouteTable
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  FrontendSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: AWS::Region
+      CidrBlock: !FindInMap
+        - StackConfig
+        - FrontendSubnet1
+        - CIDR
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackId
+        - Key: Network
+          Value: Public
+        - Key: Name
+          Value: !Sub ${AWS::StackName}FrontendSubnet1
+  FrontendSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs
+          Ref: AWS::Region
+      CidrBlock: !FindInMap
+        - StackConfig
+        - FrontendSubnet2
+        - CIDR
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackId
+        - Key: Network
+          Value: Public
+        - Key: Name
+          Value: !Sub ${AWS::StackName}FrontendSubnet2
+  ApplicationSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - StackConfig
+        - ApplicationSubnet1
+        - CIDR
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: AWS::Region
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackId
+        - Key: Network
+          Value: Public
+        - Key: Name
+          Value: !Sub ${AWS::StackName}ApplicationSubnet1
+  ApplicationSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - StackConfig
+        - ApplicationSubnet2
+        - CIDR
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs
+          Ref: AWS::Region
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackId
+        - Key: Network
+          Value: Public
+        - Key: Name
+          Value: !Sub ${AWS::StackName}ApplicationSubnet2
+  DatastoreSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - StackConfig
+        - DatastoreSubnet1
+        - CIDR
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: AWS::Region
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackId
+        - Key: Network
+          Value: Public
+        - Key: Name
+          Value: !Sub ${AWS::StackName}DatastoreSubnet1
+  DatastoreSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - StackConfig
+        - DatastoreSubnet2
+        - CIDR
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs
+          Ref: AWS::Region
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackId
+        - Key: Network
+          Value: Public
+        - Key: Name
+          Value: !Sub ${AWS::StackName}DatastoreSubnet2
+  FrontendSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FrontendSubnet1
+      RouteTableId: !Ref PublicRouteTable
+  FrontendSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FrontendSubnet2
+      RouteTableId: !Ref PublicRouteTable
+  ApplicationSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ApplicationSubnet1
+      RouteTableId: !Ref PublicRouteTable
+  ApplicationSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ApplicationSubnet2
+      RouteTableId: !Ref PublicRouteTable
+  DatastoreSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DatastoreSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+  DatastoreSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DatastoreSubnet2
+      RouteTableId: !Ref PrivateRouteTable
