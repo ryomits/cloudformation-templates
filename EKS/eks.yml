@@ -437,14 +437,17 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Cluster communication with worker nodes
-      VpcId: !Ref VPC
+      VpcId:
+        Ref: VPC
   ControlPlaneEgressToNodeSecurityGroup:
     Type: AWS::EC2::SecurityGroupEgress
     DependsOn: NodeSecurityGroup
     Properties:
       Description: Allow the cluster control plane to communicate with worker Kubelet and pods
-      GroupId: !Ref ControlPlaneSecurityGroup
-      DestinationSecurityGroupId: !Ref NodeSecurityGroup
+      GroupId:
+        Ref: ControlPlaneSecurityGroup
+      DestinationSecurityGroupId:
+        Ref: NodeSecurityGroup
       IpProtocol: tcp
       FromPort: 1025
       ToPort: 65535
@@ -464,23 +467,36 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group for all nodes in the cluster
-      VpcId: !Ref VPC
+      VpcId:
+        Ref: VPC
       Tags:
-        - Key:
-            Fn::Join:
-            - ""
-            - - kubernetes.io/cluster/
-              - Ref: EKSCluster
-          Value: owned
+      - Key:
+          Fn::Join:
+          - ""
+          - - kubernetes.io/cluster/
+            - Ref: EKSCluster
+        Value: "owned"
   NodeSecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
     DependsOn: NodeSecurityGroup
     Properties:
       Description: Allow node to communicate with each other
-      GroupId: !Ref NodeSecurityGroup
-      SourceSecurityGroupId: !Ref NodeSecurityGroup
-      IpProtocol: -1
+      GroupId:
+        Ref: NodeSecurityGroup
+      SourceSecurityGroupId:
+        Ref: NodeSecurityGroup
+      IpProtocol: '-1'
       FromPort: 0
+      ToPort: 65535
+  NodeSecurityGroupFromControlPlaneIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: NodeSecurityGroup
+    Properties:
+      Description: Allow worker Kubelets and pods to receive communication from the cluster control plane
+      GroupId: !Ref NodeSecurityGroup
+      SourceSecurityGroupId: !Ref ControlPlaneSecurityGroup
+      IpProtocol: tcp
+      FromPort: 1025
       ToPort: 65535
   EKSCluster:
     Type: AWS::EKS::Cluster
@@ -498,8 +514,6 @@ Resources:
         SubnetIds:
           - Ref: FrontendSubnet1
           - Ref: FrontendSubnet2
-          - Ref: ApplicationSubnet1
-          - Ref: ApplicationSubnet2
   NodeInstanceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -531,8 +545,8 @@ Resources:
       MinSize: !Ref NodeAutoScalingGroupMinSize
       MaxSize: !Ref NodeAutoScalingGroupMaxSize
       VPCZoneIdentifier:
-        - Ref: ApplicationSubnet1
-        - Ref: ApplicationSubnet2
+        - Ref: FrontendSubnet1
+        - Ref: FrontendSubnet2
       Tags:
         - Key: Name
           Value:
