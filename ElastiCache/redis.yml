@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: VPC sample
+Description: Redis sample
 Parameters:
   CacheNodeType:
     Description: The compute and memory capacity of the nodes in the node group (shard).
