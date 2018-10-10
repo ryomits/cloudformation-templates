@@ -18,8 +18,6 @@ Mappings:
       CIDR: 10.16.200.0/24
     DatastoreSubnet2:
       CIDR: 10.16.201.0/24
-    BastionServer:
-      InstanceType: t2.micro
 Resources:
   VPC:
     Type: AWS::EC2::VPC
