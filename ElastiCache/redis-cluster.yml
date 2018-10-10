@@ -320,3 +320,9 @@ Resources:
         - !Ref VPCDefaultSecurityGroup
       SnapshotRetentionLimit: 3
       SnapshotWindow: sun:13:30-sun:14:30
+
+Outputs:
+  CacheClusterConfigurationEndpoint:
+    Value: !GetAtt CacheCluster.ConfigurationEndPoint.Address
+  CacheClusterConfigurationEndpointPort:
+    Value: !GetAtt CacheCluster.ConfigurationEndPoint.Port
