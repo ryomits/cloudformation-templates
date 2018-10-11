@@ -514,29 +514,31 @@ Resources:
         SubnetIds:
           - Ref: FrontendSubnet1
           - Ref: FrontendSubnet2
+          - Ref: ApplicationSubnet1
+          - Ref: ApplicationSubnet2
   NodeInstanceRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
         - Effect: Allow
           Principal:
             Service:
-              - ec2.amazonaws.com
+            - ec2.amazonaws.com
           Action:
-            - sts:AssumeRole
-      Path: /
+          - sts:AssumeRole
+      Path: "/"
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
-        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
-        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+      - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+      - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+      - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
   NodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
-      Path: /
+      Path: "/"
       Roles:
-        - Ref: NodeInstanceRole
+      - Ref: NodeInstanceRole
   NodeAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -545,8 +547,8 @@ Resources:
       MinSize: !Ref NodeAutoScalingGroupMinSize
       MaxSize: !Ref NodeAutoScalingGroupMaxSize
       VPCZoneIdentifier:
-        - Ref: FrontendSubnet1
-        - Ref: FrontendSubnet2
+        - Ref: ApplicationSubnet1
+        - Ref: ApplicationSubnet2
       Tags:
         - Key: Name
           Value:
@@ -554,17 +556,18 @@ Resources:
             - ""
             - - Ref: EKSCluster
               - "-Node"
-          PropagateAtLaunch: true
+          PropagateAtLaunch: "true"
         - Key:
             Fn::Join:
             - ""
             - - kubernetes.io/cluster/
               - Ref: EKSCluster
-          Value: owned
-          PropagateAtLaunch: true
+          Value: "owned"
+          PropagateAtLaunch: "true"
   NodeLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
+      AssociatePublicIpAddress: true
       IamInstanceProfile: !Ref NodeInstanceProfile
       ImageId:
         Fn::FindInMap:
@@ -609,7 +612,7 @@ Resources:
               "systemctl restart kubelet", "\n",
               "/opt/aws/bin/cfn-signal -e $? ",
               "         --stack ", { Ref: "AWS::StackName" },
-              "         --resource NodeGroup ",
+              "         --resource NodeAutoScalingGroup ",
               "         --region ", { Ref: "AWS::Region" }, "\n"
             ]
           ]
