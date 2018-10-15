@@ -617,9 +617,6 @@ Resources:
             ]
           ]
 
-  ContainerRepository:
-    Type: AWS::ECR::Repository
-
 Outputs:
   EKSClusterName:
     Value: !Ref EKSCluster
